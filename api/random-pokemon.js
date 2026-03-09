@@ -18,9 +18,10 @@ export default async function handler(req, res) {
     });
     const hasTitle = parts.some((p) => p.endsWith("."));
     const name = parts.join(hasTitle ? " " : "-");
+    const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 
     res.setHeader("Content-Type", "text/plain");
-    res.status(200).send(name);
+    res.status(200).send(`${name} ${imageUrl}`);
   } catch (err) {
     console.error(err);
     res.status(500).send("missingno");
