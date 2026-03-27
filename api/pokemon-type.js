@@ -51,8 +51,15 @@ export default async function handler(req, res) {
       );
     }
 
+    const displayName = capitalize(data.name);
+    const formattedTypes = formatTypes(types, requestedLang === "es" ? "y" : "and");
+    const message =
+      requestedLang === "es"
+        ? `El pokémon ${displayName} es de tipo: ${formattedTypes}`
+        : `Pokemon ${displayName} is type: ${formattedTypes}`;
+
     res.setHeader("Content-Type", "text/plain");
-    res.status(200).send(formatTypes(types, requestedLang === "es" ? "y" : "and"));
+    res.status(200).send(message);
   } catch (err) {
     console.error(err);
     res.status(500).send("missingno");
