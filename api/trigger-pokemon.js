@@ -1,7 +1,9 @@
+import crypto from "crypto";
 import fetch from "node-fetch";
 import { Redis } from "@upstash/redis";
 
 const MAX_POKEMON = 1017; // update when new gen releases
+const CH_PATTERN = /^[a-zA-Z0-9_-]{1,25}$/;
 
 export const redis =
   process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
@@ -11,14 +13,67 @@ export const redis =
       })
     : null;
 
-let lastTrigger = null;
+const memoryTriggers = new Map();
 
-export function getLastTrigger() {
-  return lastTrigger;
+export function isValidCh(ch) {
+  return typeof ch === "string" && CH_PATTERN.test(ch);
+}
+
+export function triggerRedisKey(ch) {
+  return ch ? `lastTrigger:${ch}` : "lastTrigger";
+}
+
+export function getLastTrigger(ch) {
+  return memoryTriggers.get(ch || "") || null;
+}
+
+function timingSafeEqualStr(expected, provided) {
+  if (typeof provided !== "string" || provided.length === 0) return false;
+  const a = crypto.createHash("sha256").update(expected, "utf8").digest();
+  const b = crypto.createHash("sha256").update(provided, "utf8").digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+function checkAuth(ch, key) {
+  const raw = process.env.TRIGGER_KEYS;
+  if (raw === undefined || raw === "") return { ok: true };
+  let map;
+  try {
+    map = JSON.parse(raw);
+  } catch (err) {
+    console.error("TRIGGER_KEYS is not valid JSON", err);
+    return { ok: false, status: 500, message: "auth misconfigured" };
+  }
+  if (!ch) return { ok: false, status: 401, message: "missing channel" };
+  const secret = map[ch];
+  if (typeof secret !== "string" || secret.length === 0) {
+    return { ok: false, status: 401, message: "invalid key" };
+  }
+  if (!timingSafeEqualStr(secret, key)) {
+    return { ok: false, status: 401, message: "invalid key" };
+  }
+  return { ok: true };
+}
+
+function queryValue(query, name) {
+  if (!query || query[name] === undefined) return undefined;
+  const v = Array.isArray(query[name]) ? query[name][0] : query[name];
+  if (v === undefined || v === "") return undefined;
+  return String(v);
 }
 
 export default async function handler(req, res) {
   try {
+    const ch = queryValue(req.query, "ch");
+    if (ch !== undefined && !isValidCh(ch)) {
+      res.status(400).send("invalid channel");
+      return;
+    }
+    const auth = checkAuth(ch, queryValue(req.query, "key"));
+    if (!auth.ok) {
+      res.status(auth.status).send(auth.message);
+      return;
+    }
     let id;
     if (req.query && req.query.id !== undefined) {
       const requested = Number(req.query.id);
@@ -46,7 +101,7 @@ export default async function handler(req, res) {
     const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 
     const triggerId = Date.now().toString(36) + Math.random().toString(36).slice(2);
-    lastTrigger = {
+    const lastTrigger = {
       id,
       name: data.name,
       formattedName,
@@ -54,10 +109,11 @@ export default async function handler(req, res) {
       ts: Date.now(),
       triggerId,
     };
+    memoryTriggers.set(ch || "", lastTrigger);
 
     if (redis) {
       try {
-        await redis.set("lastTrigger", lastTrigger);
+        await redis.set(triggerRedisKey(ch), lastTrigger);
       } catch (err) {
         console.error("redis set failed", err);
       }

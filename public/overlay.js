@@ -1,6 +1,7 @@
 const POLL_INTERVAL_MS = 2000;
 const SCALE = 4;
 const API_URL = '/api/last-trigger';
+const CH_PATTERN = /^[a-zA-Z0-9_-]{1,25}$/;
 const MANIFEST_URL = '/sprites/manifest.json';
 const ANIM_CANDIDATES = ['Idle', 'Rotate', 'Walk'];
 const ANIM_SPEED = 0.5;
@@ -31,6 +32,7 @@ let drawRow = 0;
 let animFrameRows = 1;
 let seqRunning = false;
 let manifest = null;
+let pollUrl = API_URL;
 function resolveCopyOf(xmlDoc, targetName) {
   const anims = xmlDoc.querySelectorAll('Anim');
   for (let i = 0; i < anims.length; i++) {
@@ -340,7 +342,7 @@ async function onNewTrigger(data) {
 }
 async function pollOnce() {
   try {
-    const res = await fetch(API_URL, { cache: 'no-store' });
+    const res = await fetch(pollUrl, { cache: 'no-store' });
     if (!res.ok) return;
     const data = await res.json();
     if (data && data.triggered === false) return;
@@ -357,6 +359,14 @@ async function init() {
   const rawId = params.get('id');
   const rawAnim = params.get('anim');
   if (rawId === null && rawAnim === null) {
+    const ch = (params.get('ch') || '').trim();
+    if (ch) {
+      if (CH_PATTERN.test(ch)) {
+        pollUrl = `${API_URL}?ch=${encodeURIComponent(ch)}`;
+      } else {
+        console.warn(`overlay: invalid ?ch="${ch}" - expected [a-zA-Z0-9_-]{1,25} - falling back to global triggers`);
+      }
+    }
     startPolling();
     return;
   }
