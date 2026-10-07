@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "API that returns a random Pokemon name from PokeAPI v2",
   "type": "module",
+  "scripts": {
+    "dev": "vercel dev"
+  },
   "dependencies": {
     "@upstash/redis": "^1.39.0",
     "node-fetch": "^3.3.2"

@@ -19,7 +19,17 @@ export function getLastTrigger() {
 
 export default async function handler(req, res) {
   try {
-    const id = Math.floor(Math.random() * MAX_POKEMON) + 1;
+    let id;
+    if (req.query && req.query.id !== undefined) {
+      const requested = Number(req.query.id);
+      if (!Number.isInteger(requested) || requested < 1 || requested > MAX_POKEMON) {
+        res.status(400).send("invalid id");
+        return;
+      }
+      id = requested;
+    } else {
+      id = Math.floor(Math.random() * MAX_POKEMON) + 1;
+    }
     const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
     const data = await response.json();
     const parts = data.name.split("-").map((part) => {

@@ -10,6 +10,7 @@ html, body {
   top: 0;
   left: 0;
   pointer-events: none;
+  will-change: transform;
 }
 
 #container.hidden {
@@ -18,4 +19,6 @@ html, body {
 
 #spriteCanvas {
   display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
 }
