@@ -17,11 +17,24 @@ export default async function handler(req, res) {
       return capitalized;
     });
     const hasTitle = parts.some((p) => p.endsWith("."));
-    const name = parts.join(hasTitle ? " " : "-");
+    const formattedName = parts.join(hasTitle ? " " : "-");
     const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 
+    const format = typeof req.query?.format === "string" ? req.query.format.toLowerCase() : "text";
+
+    if (format === "json") {
+      res.setHeader("Content-Type", "application/json");
+      res.status(200).json({
+        id,
+        name: data.name,
+        formattedName,
+        imageUrl,
+      });
+      return;
+    }
+
     res.setHeader("Content-Type", "text/plain");
-    res.status(200).send(`${name} ${imageUrl}`);
+    res.status(200).send(`${formattedName} ${imageUrl}`);
   } catch (err) {
     console.error(err);
     res.status(500).send("missingno");

@@ -4,6 +4,7 @@
   "description": "API that returns a random Pokemon name from PokeAPI v2",
   "type": "module",
   "dependencies": {
+    "@upstash/redis": "^1.39.0",
     "node-fetch": "^3.3.2"
   }
 }
