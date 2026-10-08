@@ -29,6 +29,8 @@ let sequenceLoop = false;
 let drawRow = 0;
 let animFrameRows = 1;
 let seqRunning = false;
+let triggerQueue = [];
+let queueDraining = false;
 let manifest = null;
 function resolveCopyOf(xmlDoc, targetName) {
   const anims = xmlDoc.querySelectorAll('Anim');
@@ -334,8 +336,21 @@ function tickAnim(ts) {
 }
 async function onNewTrigger(data) {
   if (!data || typeof data.id !== 'number') return;
-  const id4 = String(data.id).padStart(4, '0');
-  await playSequence(id4);
+  triggerQueue.push(String(data.id).padStart(4, '0'));
+  drainTriggerQueue();
+}
+function drainTriggerQueue() {
+  if (queueDraining) return;
+  queueDraining = true;
+  (async () => {
+    try {
+      while (triggerQueue.length > 0) {
+        await playSequence(triggerQueue.shift());
+      }
+    } finally {
+      queueDraining = false;
+    }
+  })();
 }
 function handleTrigger(data) {
   if (!data || typeof data.id !== 'number') return;
