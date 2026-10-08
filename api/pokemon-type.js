@@ -1,3 +1,5 @@
+import { maybePublishFromQuery } from "../lib/trigger.js";
+
 export default async function handler(req, res) {
   const { name, lang } = req.query;
   const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
@@ -32,6 +34,7 @@ export default async function handler(req, res) {
     }
 
     const data = await response.json();
+    await maybePublishFromQuery(req.query, data.id, data.name);
     const typeEntries = data.types.sort((a, b) => a.slot - b.slot);
     let types = typeEntries.map((entry) => entry.type.name);
 

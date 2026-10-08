@@ -1,22 +1,33 @@
-const MAX_POKEMON = 1017; // update when new gen releases
+import {
+  MAX_POKEMON,
+  randomSpriteId,
+  formatPokemonName,
+  maybePublishFromQuery,
+} from "../lib/trigger.js";
 
 export default async function handler(req, res) {
   try {
-    const id = Math.floor(Math.random() * MAX_POKEMON) + 1;
+    const query = req.query || {};
+    const wantsTrigger = query.ch !== undefined || query.key !== undefined;
+    let id;
+    if (query.id !== undefined) {
+      const requested = Number(query.id);
+      if (!Number.isInteger(requested) || requested < 1 || requested > MAX_POKEMON) {
+        res.status(400).send("invalid id");
+        return;
+      }
+      id = requested;
+    } else if (wantsTrigger) {
+      id = randomSpriteId();
+    } else {
+      id = Math.floor(Math.random() * MAX_POKEMON) + 1;
+    }
     const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
     const data = await response.json();
-    const parts = data.name.split("-").map((part) => {
-      const lower = part.toLowerCase();
-      const capitalized =
-        part.charAt(0).toUpperCase() + part.slice(1).toLowerCase();
-      if (lower === "mr" || lower === "jr") {
-        return capitalized + ".";
-      }
-      return capitalized;
-    });
-    const hasTitle = parts.some((p) => p.endsWith("."));
-    const formattedName = parts.join(hasTitle ? " " : "-");
+    const formattedName = formatPokemonName(data.name);
     const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+
+    await maybePublishFromQuery(query, id, data.name);
 
     const format = typeof req.query?.format === "string" ? req.query.format.toLowerCase() : "text";
 
