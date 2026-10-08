@@ -1,5 +1,3 @@
-import fetch from "node-fetch";
-
 const MAX_POKEMON = 1017; // update when new gen releases
 
 export default async function handler(req, res) {

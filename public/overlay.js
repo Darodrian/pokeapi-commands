@@ -1,7 +1,6 @@
-const POLL_INTERVAL_MS = 2000;
 const SCALE = 4;
-const API_URL = '/api/last-trigger';
 const CH_PATTERN = /^[a-zA-Z0-9_-]{1,25}$/;
+const ABLY_PUBLIC_KEY = 'LfTOQQ.ssXL1w:z1T7On6U6yeJkuXit7IUR8MEF45aVeXdkNPShGr8ILs';
 const MANIFEST_URL = '/sprites/manifest.json';
 const ANIM_CANDIDATES = ['Idle', 'Rotate', 'Walk'];
 const ANIM_SPEED = 0.5;
@@ -21,7 +20,6 @@ let animFrameWidth = 0;
 let animFrameHeight = 0;
 let animTotalDuration = 0;
 let rafId = null;
-let pollTimer = null;
 let currentSheetImg = null;
 let currentSpriteId4 = null;
 let currentAssetsReady = false;
@@ -32,7 +30,6 @@ let drawRow = 0;
 let animFrameRows = 1;
 let seqRunning = false;
 let manifest = null;
-let pollUrl = API_URL;
 function resolveCopyOf(xmlDoc, targetName) {
   const anims = xmlDoc.querySelectorAll('Anim');
   for (let i = 0; i < anims.length; i++) {
@@ -340,34 +337,50 @@ async function onNewTrigger(data) {
   const id4 = String(data.id).padStart(4, '0');
   await playSequence(id4);
 }
-async function pollOnce() {
-  try {
-    const res = await fetch(pollUrl, { cache: 'no-store' });
-    if (!res.ok) return;
-    const data = await res.json();
-    if (data && data.triggered === false) return;
-    const tId = data.triggerId || data.ts;
-    if (tId && lastTriggerId !== tId) {
-      lastTriggerId = tId;
-      onNewTrigger(data);
-    }
-  } catch (e) {}
+function handleTrigger(data) {
+  if (!data || typeof data.id !== 'number') return;
+  const tId = data.triggerId || data.ts;
+  if (!tId || lastTriggerId === tId) return;
+  lastTriggerId = tId;
+  onNewTrigger(data);
 }
-function startPolling() { pollOnce(); pollTimer = setInterval(pollOnce, POLL_INTERVAL_MS); }
+function initAbly(channelName) {
+  if (typeof Ably === 'undefined') {
+    console.error('overlay: Ably SDK failed to load - triggers will not arrive');
+    return;
+  }
+  try {
+    const ably = new Ably.Realtime({ key: ABLY_PUBLIC_KEY });
+    ably.channels.get(channelName).subscribe('trigger', (msg) => handleTrigger(msg.data));
+    ably.connection.on('connected', () => console.log(`overlay: push connected (${channelName})`));
+    const warn = (state) => () => console.warn(`overlay: push ${state} - triggers will not arrive until reconnected`);
+    ably.connection.on('disconnected', warn('disconnected'));
+    ably.connection.on('suspended', warn('suspended'));
+    ably.connection.on('failed', warn('failed'));
+    window.addEventListener('pagehide', () => { try { ably.close(); } catch (e) {} });
+  } catch (e) {
+    console.error('overlay: Ably init failed', e);
+  }
+}
 async function init() {
   const params = new URLSearchParams(window.location.search);
   const rawId = params.get('id');
   const rawAnim = params.get('anim');
   if (rawId === null && rawAnim === null) {
     const ch = (params.get('ch') || '').trim();
+    let chValid = false;
     if (ch) {
       if (CH_PATTERN.test(ch)) {
-        pollUrl = `${API_URL}?ch=${encodeURIComponent(ch)}`;
+        chValid = true;
       } else {
         console.warn(`overlay: invalid ?ch="${ch}" - expected [a-zA-Z0-9_-]{1,25} - falling back to global triggers`);
       }
     }
-    startPolling();
+    if (!ABLY_PUBLIC_KEY) {
+      console.error('overlay: realtime key not configured - triggers will not arrive');
+      return;
+    }
+    initAbly(chValid ? `t:${ch}` : 't:@global');
     return;
   }
   manualMode = true;

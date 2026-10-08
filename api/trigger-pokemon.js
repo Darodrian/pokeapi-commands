@@ -1,30 +1,53 @@
 import crypto from "crypto";
-import fetch from "node-fetch";
-import { Redis } from "@upstash/redis";
+import fs from "node:fs";
 
 const MAX_POKEMON = 1017; // update when new gen releases
 const CH_PATTERN = /^[a-zA-Z0-9_-]{1,25}$/;
 
-export const redis =
-  process.env.KV_REST_API_URL && process.env.KV_REST_API_TOKEN
-    ? new Redis({
-        url: process.env.KV_REST_API_URL,
-        token: process.env.KV_REST_API_TOKEN,
-      })
-    : null;
+let spriteIds = null;
 
-const memoryTriggers = new Map();
+function loadSpriteIds() {
+  try {
+    const manifest = JSON.parse(
+      fs.readFileSync(new URL("../public/sprites/manifest.json", import.meta.url), "utf8")
+    );
+    return Object.keys(manifest)
+      .map(Number)
+      .filter(Number.isInteger)
+      .sort((a, b) => a - b);
+  } catch (err) {
+    console.error("sprites manifest unreadable, falling back to 1-1017", err);
+    return [];
+  }
+}
+
+function randomSpriteId() {
+  if (!spriteIds || spriteIds.length === 0) spriteIds = loadSpriteIds();
+  if (spriteIds.length === 0) return Math.floor(Math.random() * MAX_POKEMON) + 1;
+  return spriteIds[Math.floor(Math.random() * spriteIds.length)];
+}
+
+async function publishTrigger(ch, data) {
+  const key = process.env.ABLY_API_KEY;
+  if (!key) return;
+  const channel = ch ? `t:${ch}` : "t:@global";
+  try {
+    const res = await fetch(`https://rest.ably.io/channels/${channel}/messages`, {
+      method: "POST",
+      headers: {
+        Authorization: `Basic ${Buffer.from(key, "utf8").toString("base64")}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ name: "trigger", data }),
+    });
+    if (!res.ok) console.error("ably publish failed", res.status, await res.text());
+  } catch (err) {
+    console.error("ably publish failed", err);
+  }
+}
 
 export function isValidCh(ch) {
   return typeof ch === "string" && CH_PATTERN.test(ch);
-}
-
-export function triggerRedisKey(ch) {
-  return ch ? `lastTrigger:${ch}` : "lastTrigger";
-}
-
-export function getLastTrigger(ch) {
-  return memoryTriggers.get(ch || "") || null;
 }
 
 function timingSafeEqualStr(expected, provided) {
@@ -83,7 +106,7 @@ export default async function handler(req, res) {
       }
       id = requested;
     } else {
-      id = Math.floor(Math.random() * MAX_POKEMON) + 1;
+      id = randomSpriteId();
     }
     const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
     const data = await response.json();
@@ -109,15 +132,7 @@ export default async function handler(req, res) {
       ts: Date.now(),
       triggerId,
     };
-    memoryTriggers.set(ch || "", lastTrigger);
-
-    if (redis) {
-      try {
-        await redis.set(triggerRedisKey(ch), lastTrigger);
-      } catch (err) {
-        console.error("redis set failed", err);
-      }
-    }
+    await publishTrigger(ch, lastTrigger);
 
     res.setHeader("Content-Type", "text/plain");
     res.status(200).send(`${formattedName} ${imageUrl}`);

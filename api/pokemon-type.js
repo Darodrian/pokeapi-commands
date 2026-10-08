@@ -1,5 +1,3 @@
-import fetch from "node-fetch";
-
 export default async function handler(req, res) {
   const { name, lang } = req.query;
   const capitalize = (text) => text.charAt(0).toUpperCase() + text.slice(1);
