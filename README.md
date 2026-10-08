@@ -18,7 +18,10 @@ point the response to each URL:
 | Command | Response URL |
 | --- | --- |
 | `!pokerandom` | `https://pokeapi-commands.vercel.app/api/random-pokemon` |
-| `!poketype <name>` | `https://pokeapi-commands.vercel.app/api/pokemon-type?name=$(queryescape $(1:))` |
+| `!poketype` | `https://pokeapi-commands.vercel.app/api/pokemon-type?name=$(queryescape $(1:))` |
+
+The `!poketype` command takes the first word after it as the Pokémon name
+(e.g. `!poketype pikachu`).
 
 ## Sprite overlay
 
