@@ -45,6 +45,25 @@ added to the URLs:
 - **API URLs** — add the channel and key: `random-pokemon?ch=yourchannel&key=yourkey`
   (same for pokemon-type)
 
+### Shiny sprites
+
+Each trigger has a random chance to appear shiny (default **1%**). Change it
+with the `SHINY_CHANCE` environment variable — a decimal (`0.01`) or a fraction
+(`1/100`). Set it to `0` to disable shinies. Preview one in manual mode with
+`overlay.html?id=25&shiny=1`.
+
+### Sprite assets
+
+Sprite images are not stored in this repo. They are hosted on GitHub Pages at
+`https://darodrian.github.io/pokeapi-sprites/` and loaded by the overlay; only
+the animation manifests (`public/sprites/manifest.json`,
+`public/sprites/manifest-shiny.json`) live here. To (re)build the hosted
+assets and manifests from a local SpriteCollab checkout:
+
+```
+npm run build:assets -- --source "<SpriteCollab>/sprite" --assets-out "<pokeapi-sprites clone>"
+```
+
 ## Credits
 
 - [PokeAPI](https://pokeapi.co/docs/v2)

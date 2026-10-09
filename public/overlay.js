@@ -2,6 +2,8 @@ const SCALE = 4;
 const CH_PATTERN = /^[a-zA-Z0-9_-]{1,25}$/;
 const ABLY_PUBLIC_KEY = 'LfTOQQ.ssXL1w:z1T7On6U6yeJkuXit7IUR8MEF45aVeXdkNPShGr8ILs';
 const MANIFEST_URL = '/sprites/manifest.json';
+const SHINY_MANIFEST_URL = '/sprites/manifest-shiny.json';
+const ASSET_BASE_URL = 'https://darodrian.github.io/pokeapi-sprites';
 const ANIM_CANDIDATES = ['Idle', 'Rotate', 'Walk'];
 const ANIM_SPEED = 0.5;
 const ENTER_CYCLES = 2;
@@ -32,6 +34,7 @@ let seqRunning = false;
 let triggerQueue = [];
 let queueDraining = false;
 let manifest = null;
+let shinyManifest = null;
 function resolveCopyOf(xmlDoc, targetName) {
   const anims = xmlDoc.querySelectorAll('Anim');
   for (let i = 0; i < anims.length; i++) {
@@ -84,7 +87,7 @@ function setFrameSize(fw, fh) {
   container.style.width = fw * SCALE + 'px';
   container.style.height = fh * SCALE + 'px';
 }
-function loadAssetsForSprite(spriteId4, forcedAnim) {
+function loadAssetsForSprite(spriteId4, forcedAnim, shiny) {
   const candidates = forcedAnim ? [forcedAnim] : ANIM_CANDIDATES;
   return new Promise((resolve) => {
     let candidateIndex = 0;
@@ -96,7 +99,7 @@ function loadAssetsForSprite(spriteId4, forcedAnim) {
         return;
       }
       const animName = candidates[candidateIndex++];
-      const cachedKey = `${spriteId4}:${animName}`;
+      const cachedKey = `${shiny ? 'shiny' : 'normal'}:${spriteId4}:${animName}`;
       if (sheetCache.has(cachedKey)) {
         const cached = sheetCache.get(cachedKey);
         if (cached.ready) {
@@ -113,7 +116,7 @@ function loadAssetsForSprite(spriteId4, forcedAnim) {
           return;
         }
       }
-      const base = `/sprites/${spriteId4}`;
+      const base = `${ASSET_BASE_URL}${shiny ? '/shiny' : ''}/${spriteId4}`;
       const xmlUrl = `${base}/AnimData.xml`;
       const sheetUrl = `${base}/${animName}-Anim.png`;
       const sheetImg = new Image();
@@ -178,15 +181,23 @@ function restPosition() {
     y: Math.round((window.innerHeight - h) / 2),
   };
 }
-function ensureManifest() {
-  if (manifest) return Promise.resolve(manifest);
-  return fetch(MANIFEST_URL, { cache: 'no-store' })
+function ensureManifest(shiny) {
+  const url = shiny ? SHINY_MANIFEST_URL : MANIFEST_URL;
+  if (shiny ? shinyManifest : manifest) return Promise.resolve(shiny ? shinyManifest : manifest);
+  return fetch(url, { cache: 'no-store' })
     .then((r) => (r.ok ? r.json() : null))
-    .then((m) => { manifest = m && typeof m === 'object' ? m : {}; return manifest; })
-    .catch(() => { manifest = {}; return manifest; });
+    .then((m) => {
+      const value = m && typeof m === 'object' ? m : {};
+      if (shiny) shinyManifest = value; else manifest = value;
+      return value;
+    })
+    .catch(() => {
+      if (shiny) shinyManifest = {}; else manifest = {};
+      return shiny ? shinyManifest : manifest;
+    });
 }
-function pickCenterAnim(id4) {
-  const list = (manifest && manifest[id4]) || [];
+function pickCenterAnim(id4, shiny) {
+  const list = ((shiny ? shinyManifest : manifest) || {})[id4] || [];
   const pool = list.filter((a) => a !== 'Walk');
   if (pool.length === 0) return 'Idle';
   return pool[Math.floor(Math.random() * pool.length)];
@@ -233,26 +244,26 @@ function playCurrentAnimOnce() {
     requestAnimationFrame(step);
   });
 }
-async function playSequence(id4) {
+async function playSequence(id4, shiny) {
   if (seqRunning) return true;
   seqRunning = true;
   try {
-    await ensureManifest();
-    if (!(await loadAssetsForSprite(id4, 'Walk'))) {
+    await ensureManifest(shiny);
+    if (!(await loadAssetsForSprite(id4, 'Walk', shiny))) {
       console.warn(`overlay: no walk animation for id ${id4} - skipping sequence`);
       return false;
     }
     await animateMove('left', ENTER_CYCLES * cycleMs());
-    const picked = pickCenterAnim(id4);
+    const picked = pickCenterAnim(id4, shiny);
     const attempts = picked === 'Idle' ? ['Idle'] : [picked, 'Idle'];
     let centered = false;
     for (let i = 0; i < attempts.length && !centered; i++) {
-      if (await loadAssetsForSprite(id4, attempts[i])) {
+      if (await loadAssetsForSprite(id4, attempts[i], shiny)) {
         await playCurrentAnimOnce();
         centered = true;
       }
     }
-    if (await loadAssetsForSprite(id4, 'Walk')) {
+    if (await loadAssetsForSprite(id4, 'Walk', shiny)) {
       await animateMove('right', EXIT_CYCLES * cycleMs());
     }
     container.classList.add('hidden');
@@ -265,9 +276,9 @@ async function playSequence(id4) {
     seqRunning = false;
   }
 }
-async function runSequenceLoop(id4) {
+async function runSequenceLoop(id4, shiny) {
   while (sequenceLoop) {
-    const ok = await playSequence(id4);
+    const ok = await playSequence(id4, shiny);
     if (!ok) return;
     await new Promise((r) => setTimeout(r, 400));
   }
@@ -336,7 +347,7 @@ function tickAnim(ts) {
 }
 async function onNewTrigger(data) {
   if (!data || typeof data.id !== 'number') return;
-  triggerQueue.push(String(data.id).padStart(4, '0'));
+  triggerQueue.push({ id4: String(data.id).padStart(4, '0'), shiny: !!data.shiny });
   drainTriggerQueue();
 }
 function drainTriggerQueue() {
@@ -345,7 +356,8 @@ function drainTriggerQueue() {
   (async () => {
     try {
       while (triggerQueue.length > 0) {
-        await playSequence(triggerQueue.shift());
+        const next = triggerQueue.shift();
+        await playSequence(next.id4, next.shiny);
       }
     } finally {
       queueDraining = false;
@@ -381,6 +393,8 @@ async function init() {
   const params = new URLSearchParams(window.location.search);
   const rawId = params.get('id');
   const rawAnim = params.get('anim');
+  const rawShiny = params.get('shiny');
+  const shiny = rawShiny === '1' || rawShiny === 'true';
   if (rawId === null && rawAnim === null) {
     const ch = (params.get('ch') || '').trim();
     let chValid = false;
@@ -406,19 +420,19 @@ async function init() {
   }
   const id4 = String(id).padStart(4, '0');
   if (rawAnim !== null && rawAnim.trim()) {
-    await ensureManifest();
-    const list = (manifest && manifest[id4]) || null;
+    await ensureManifest(shiny);
+    const list = ((shiny ? shinyManifest : manifest) || {})[id4] || null;
     let anim = null;
     if (list) {
       anim = list.find((a) => a.toLowerCase() === rawAnim.trim().toLowerCase()) || null;
       if (!anim) {
-        console.warn(`overlay: "${rawAnim.trim()}" is not available for id ${id} - see /sprites/manifest.json`);
+        console.warn(`overlay: "${rawAnim.trim()}" is not available for id ${id} - see ${shiny ? '/sprites/manifest-shiny.json' : '/sprites/manifest.json'}`);
         return;
       }
     } else {
       anim = rawAnim.trim();
     }
-    const ready = await loadAssetsForSprite(id4, anim);
+    const ready = await loadAssetsForSprite(id4, anim, shiny);
     if (ready) {
       const rawRow = params.get('row');
       const rowNum = Number(rawRow);
@@ -430,6 +444,6 @@ async function init() {
     return;
   }
   sequenceLoop = true;
-  runSequenceLoop(id4);
+  runSequenceLoop(id4, shiny);
 }
 init();

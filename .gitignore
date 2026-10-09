@@ -12,6 +12,12 @@ npm-debug.log*
 # Vercel
 .vercel
 
+# Sprite assets are hosted on GitHub Pages (darodrian/pokeapi-sprites).
+# Keep only the manifests in this repo.
+public/sprites/**
+!public/sprites/manifest.json
+!public/sprites/manifest-shiny.json
+
 # OS
 .DS_Store
 Thumbs.db
