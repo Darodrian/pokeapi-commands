@@ -55,7 +55,7 @@ with the `SHINY_CHANCE` environment variable — a decimal (`0.01`) or a fractio
 ### Sprite assets
 
 Sprite images are not stored in this repo. They are hosted on GitHub Pages at
-`https://darodrian.github.io/pokeapi-sprites/` and loaded by the overlay; only
+`https://darodrian.github.io/pokeapi-sprites/sprites/` and loaded by the overlay; only
 the animation manifests (`public/sprites/manifest.json`,
 `public/sprites/manifest-shiny.json`) live here. To (re)build the hosted
 assets and manifests from a local SpriteCollab checkout:

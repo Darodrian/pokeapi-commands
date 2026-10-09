@@ -116,7 +116,7 @@ function loadAssetsForSprite(spriteId4, forcedAnim, shiny) {
           return;
         }
       }
-      const base = `${ASSET_BASE_URL}${shiny ? '/shiny' : ''}/${spriteId4}`;
+      const base = `${ASSET_BASE_URL}/sprites${shiny ? '/shiny' : ''}/${spriteId4}`;
       const xmlUrl = `${base}/AnimData.xml`;
       const sheetUrl = `${base}/${animName}-Anim.png`;
       const sheetImg = new Image();
