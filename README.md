@@ -47,18 +47,7 @@ added to the URLs:
 
 ### Shiny sprites
 
-Each trigger has a random chance to appear shiny (default **1%**). Change it
-with the `SHINY_CHANCE` environment variable — a decimal (`0.01`) or a fraction
-(`1/100`). Set it to `0` to disable shinies. Preview one in manual mode with
-`overlay.html?id=25&shiny=1`.
-
-### Sprite assets
-
-Sprite images *and* the animation manifests are hosted on GitHub Pages at
-`https://darodrian.github.io/pokeapi-sprites/sprites/` — this repo keeps no
-sprite data and only depends on that site. The overlay loads assets directly
-from Pages, and the server fetches the manifests (`manifest.json`,
-`manifest-shiny.json`) from the same origin.
+Each trigger has a random chance to appear shiny (**1%**).
 
 ## Credits
 
