@@ -24,7 +24,7 @@ function parseArgs(argv) {
 const args = parseArgs(process.argv.slice(2));
 const source = path.resolve(args.source || path.join(repoRoot, "..", "SpriteCollab-master", "sprite"));
 const assetsOut = path.resolve(args["assets-out"] || path.join(repoRoot, "..", "pokeapi-sprites"));
-const manifestOut = path.resolve(args["manifest-out"] || path.join(repoRoot, "public", "sprites"));
+const manifestOut = path.resolve(args["manifest-out"] || path.join(assetsOut, "sprites"));
 const minId = Number.parseInt(args.min || "1", 10);
 const maxId = Number.parseInt(args.max || "898", 10);
 

@@ -1,8 +1,8 @@
 const SCALE = 4;
 const CH_PATTERN = /^[a-zA-Z0-9_-]{1,25}$/;
 const ABLY_PUBLIC_KEY = 'LfTOQQ.ssXL1w:z1T7On6U6yeJkuXit7IUR8MEF45aVeXdkNPShGr8ILs';
-const MANIFEST_URL = '/sprites/manifest.json';
-const SHINY_MANIFEST_URL = '/sprites/manifest-shiny.json';
+const MANIFEST_URL = 'https://darodrian.github.io/pokeapi-sprites/sprites/manifest.json';
+const SHINY_MANIFEST_URL = 'https://darodrian.github.io/pokeapi-sprites/sprites/manifest-shiny.json';
 const ASSET_BASE_URL = 'https://darodrian.github.io/pokeapi-sprites';
 const ANIM_CANDIDATES = ['Idle', 'Rotate', 'Walk'];
 const ANIM_SPEED = 0.5;

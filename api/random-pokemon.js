@@ -18,7 +18,7 @@ export default async function handler(req, res) {
       }
       id = requested;
     } else if (wantsTrigger) {
-      id = randomSpriteId();
+      id = await randomSpriteId();
     } else {
       id = Math.floor(Math.random() * MAX_POKEMON) + 1;
     }
