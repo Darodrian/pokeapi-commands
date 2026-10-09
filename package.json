@@ -4,7 +4,6 @@
   "description": "API that returns a random Pokemon name from PokeAPI v2",
   "type": "module",
   "scripts": {
-    "dev": "vercel dev",
-    "build:assets": "node scripts/build-assets.mjs"
+    "dev": "vercel dev"
   }
 }

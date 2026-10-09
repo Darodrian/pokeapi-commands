@@ -58,13 +58,7 @@ Sprite images *and* the animation manifests are hosted on GitHub Pages at
 `https://darodrian.github.io/pokeapi-sprites/sprites/` — this repo keeps no
 sprite data and only depends on that site. The overlay loads assets directly
 from Pages, and the server fetches the manifests (`manifest.json`,
-`manifest-shiny.json`) from the same origin. To (re)build the hosted assets
-and manifests from a local SpriteCollab checkout, run the script with the
-assets repo as the output, then commit and push that repo:
-
-```
-npm run build:assets -- --source "<SpriteCollab>/sprite" --assets-out "<pokeapi-sprites clone>"
-```
+`manifest-shiny.json`) from the same origin.
 
 ## Credits
 
