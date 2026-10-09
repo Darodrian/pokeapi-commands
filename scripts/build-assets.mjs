@@ -88,7 +88,7 @@ const missingShiny = [];
 for (let id = minId; id <= maxId; id++) {
   const d4 = id4(id);
 
-  const normal = copySet(path.join(source, d4), path.join(assetsOut, "sprites", d4));
+  const normal = copySet(path.join(source, d4), path.join(assetsOut, "sprites", "base", d4));
   if (normal) {
     normalManifest[d4] = normal.anims;
     stats.normal.dex++;
