@@ -53,24 +53,27 @@ export default async function handler(req, res) {
     const formattedName = nameIsFormatted ? name : formatPokemonName(name);
     const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 
-    await maybePublishFromQuery(query, id, name, undefined, variation);
+    const isShiny = await maybePublishFromQuery(query, id, name, undefined, variation);
 
     const format = typeof req.query?.format === "string" ? req.query.format.toLowerCase() : "text";
+
+    const shinySuffix = isShiny ? " ✨" : "";
 
     if (format === "json") {
       res.setHeader("Content-Type", "application/json");
       res.status(200).json({
         id,
         name: data ? data.name : name,
-        formattedName,
+        formattedName: formattedName + shinySuffix,
         imageUrl,
         variation,
+        shiny: isShiny,
       });
       return;
     }
 
     res.setHeader("Content-Type", "text/plain");
-    res.status(200).send(`${formattedName} ${imageUrl}`);
+    res.status(200).send(`${formattedName}${shinySuffix} ${imageUrl}`);
   } catch (err) {
     console.error(err);
     res.status(500).send("missingno");
