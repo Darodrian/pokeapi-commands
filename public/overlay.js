@@ -87,8 +87,9 @@ function setFrameSize(fw, fh) {
   container.style.width = fw * SCALE + 'px';
   container.style.height = fh * SCALE + 'px';
 }
-function loadAssetsForSprite(spriteId4, forcedAnim, shiny) {
+function loadAssetsForSprite(spriteId4, variation, forcedAnim, shiny) {
   const candidates = forcedAnim ? [forcedAnim] : ANIM_CANDIDATES;
+  const varSuffix = variation ? `/${variation}` : '';
   return new Promise((resolve) => {
     let candidateIndex = 0;
     tryCandidate();
@@ -99,7 +100,7 @@ function loadAssetsForSprite(spriteId4, forcedAnim, shiny) {
         return;
       }
       const animName = candidates[candidateIndex++];
-      const cachedKey = `${shiny ? 'shiny' : 'normal'}:${spriteId4}:${animName}`;
+      const cachedKey = `${shiny ? 'shiny' : 'normal'}:${spriteId4}${variation ? ':' + variation : ''}:${animName}`;
       if (sheetCache.has(cachedKey)) {
         const cached = sheetCache.get(cachedKey);
         if (cached.ready) {
@@ -116,7 +117,7 @@ function loadAssetsForSprite(spriteId4, forcedAnim, shiny) {
           return;
         }
       }
-      const base = `${ASSET_BASE_URL}/sprites/${shiny ? 'shiny' : 'base'}/${spriteId4}`;
+      const base = `${ASSET_BASE_URL}/sprites/${shiny ? 'shiny' : 'base'}/${spriteId4}${varSuffix}`;
       const xmlUrl = `${base}/AnimData.xml`;
       const sheetUrl = `${base}/${animName}-Anim.png`;
       const sheetImg = new Image();
@@ -196,8 +197,9 @@ function ensureManifest(shiny) {
       return shiny ? shinyManifest : manifest;
     });
 }
-function pickCenterAnim(id4, shiny) {
-  const list = ((shiny ? shinyManifest : manifest) || {})[id4] || [];
+function pickCenterAnim(id4, variation, shiny) {
+  const manifestKey = variation ? id4 + variation : id4;
+  const list = ((shiny ? shinyManifest : manifest) || {})[manifestKey] || [];
   const pool = list.filter((a) => a !== 'Walk');
   if (pool.length === 0) return 'Idle';
   return pool[Math.floor(Math.random() * pool.length)];
@@ -244,26 +246,26 @@ function playCurrentAnimOnce() {
     requestAnimationFrame(step);
   });
 }
-async function playSequence(id4, shiny) {
+async function playSequence(id4, variation, shiny) {
   if (seqRunning) return true;
   seqRunning = true;
   try {
     await ensureManifest(shiny);
-    if (!(await loadAssetsForSprite(id4, 'Walk', shiny))) {
-      console.warn(`overlay: no walk animation for id ${id4} - skipping sequence`);
+    if (!(await loadAssetsForSprite(id4, variation, 'Walk', shiny))) {
+      console.warn(`overlay: no walk animation for id ${id4}${variation ? ' var ' + variation : ''} - skipping sequence`);
       return false;
     }
     await animateMove('left', ENTER_CYCLES * cycleMs());
-    const picked = pickCenterAnim(id4, shiny);
+    const picked = pickCenterAnim(id4, variation, shiny);
     const attempts = picked === 'Idle' ? ['Idle'] : [picked, 'Idle'];
     let centered = false;
     for (let i = 0; i < attempts.length && !centered; i++) {
-      if (await loadAssetsForSprite(id4, attempts[i], shiny)) {
+      if (await loadAssetsForSprite(id4, variation, attempts[i], shiny)) {
         await playCurrentAnimOnce();
         centered = true;
       }
     }
-    if (await loadAssetsForSprite(id4, 'Walk', shiny)) {
+    if (await loadAssetsForSprite(id4, variation, 'Walk', shiny)) {
       await animateMove('right', EXIT_CYCLES * cycleMs());
     }
     container.classList.add('hidden');
@@ -276,9 +278,9 @@ async function playSequence(id4, shiny) {
     seqRunning = false;
   }
 }
-async function runSequenceLoop(id4, shiny) {
+async function runSequenceLoop(id4, variation, shiny) {
   while (sequenceLoop) {
-    const ok = await playSequence(id4, shiny);
+    const ok = await playSequence(id4, variation, shiny);
     if (!ok) return;
     await new Promise((r) => setTimeout(r, 400));
   }
@@ -347,7 +349,11 @@ function tickAnim(ts) {
 }
 async function onNewTrigger(data) {
   if (!data || typeof data.id !== 'number') return;
-  triggerQueue.push({ id4: String(data.id).padStart(4, '0'), shiny: !!data.shiny });
+  triggerQueue.push({
+    id4: String(data.id).padStart(4, '0'),
+    variation: data.variation || null,
+    shiny: !!data.shiny,
+  });
   drainTriggerQueue();
 }
 function drainTriggerQueue() {
@@ -357,7 +363,7 @@ function drainTriggerQueue() {
     try {
       while (triggerQueue.length > 0) {
         const next = triggerQueue.shift();
-        await playSequence(next.id4, next.shiny);
+        await playSequence(next.id4, next.variation, next.shiny);
       }
     } finally {
       queueDraining = false;
@@ -432,7 +438,7 @@ async function init() {
     } else {
       anim = rawAnim.trim();
     }
-    const ready = await loadAssetsForSprite(id4, anim, shiny);
+    const ready = await loadAssetsForSprite(id4, null, anim, shiny);
     if (ready) {
       const rawRow = params.get('row');
       const rowNum = Number(rawRow);
@@ -444,6 +450,6 @@ async function init() {
     return;
   }
   sequenceLoop = true;
-  runSequenceLoop(id4, shiny);
+  runSequenceLoop(id4, null, shiny);
 }
 init();
