@@ -92,24 +92,32 @@ export default async function handler(req, res) {
 
     data = await response.json();
 
+    // Determine the tracker sheet id for this pokemon. PokeAPI may return a
+    // form-specific id (e.g. basculin-blue-striped -> 10016) while the sprite
+    // manifest indexes all forms under the base species sheet (e.g. 550).
+    // PokeAPI provides species.name (e.g. "basculin") which matches the tracker
+    // sheet name.
+    const speciesSheet = findTrackerSheetByName(data.species?.name);
+    const trackerSheetId = speciesSheet ? speciesSheet.sheetId : data.id;
+
     // All deployed sprite variations (base + variants) for this pokemon.
-    const pool = await spritePoolForSheetId(data.id);
+    const pool = await spritePoolForSheetId(trackerSheetId);
     const picked =
       pool.length > 0
         ? pool[Math.floor(Math.random() * pool.length)]
-        : { id: data.id, variation: null };
+        : { id: trackerSheetId, variation: null };
     spriteId = picked.id;
     selectedVariation = picked.variation;
 
     // Display name from the SpriteCollab tracker, specific to the variation.
-    const trackerName = spriteDisplayName(data.id, selectedVariation);
+    const trackerName = spriteDisplayName(trackerSheetId, selectedVariation);
     displayName = trackerName || capitalize(data.name);
 
     // Resolve types: try the variation-specific PokeAPI form first, fall back
     // to the base pokemon's types when no matching form exists.
     let typeEntries = data.types.sort((a, b) => a.slot - b.slot);
     if (selectedVariation) {
-      const sheet = tracker[String(data.id).padStart(4, "0")];
+      const sheet = tracker[String(trackerSheetId).padStart(4, "0")];
       const trackerVariant = sheet?.subgroups?.[selectedVariation]?.name;
       if (trackerVariant) {
         const normalizedVariant = normalizeForm(trackerVariant);
