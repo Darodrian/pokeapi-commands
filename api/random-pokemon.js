@@ -32,17 +32,25 @@ export default async function handler(req, res) {
 
     let data;
     let name;
+    let nameIsFormatted = false; // tracker display names are already formatted
     const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
     if (response.ok) {
       data = await response.json();
-      // Display the specific variation name when a variation rolled.
-      name = variation ? (spriteDisplayName(id, variation) || data.name) : data.name;
+      if (variation) {
+        // Variation rolled: use the tracker display name (already formatted).
+        const trackerName = spriteDisplayName(id, variation);
+        name = trackerName || data.name;
+        nameIsFormatted = !!trackerName;
+      } else {
+        name = data.name;
+      }
     } else {
       // id may sit outside PokeAPI's range (e.g. sheet 1024); fall back to tracker name.
       name = spriteDisplayName(id, variation) || `pokemon-${id}`;
+      nameIsFormatted = true;
     }
 
-    const formattedName = formatPokemonName(name);
+    const formattedName = nameIsFormatted ? name : formatPokemonName(name);
     const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 
     await maybePublishFromQuery(query, id, name, undefined, variation);

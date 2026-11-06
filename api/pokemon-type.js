@@ -1,3 +1,5 @@
+import tracker from "../lib/tracker.json" with { type: "json" };
+
 import {
   maybePublishFromQuery,
   spriteExists,
