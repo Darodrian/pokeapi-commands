@@ -47,6 +47,21 @@ export default async function handler(req, res) {
     .replace(/_/g, "-")
     .replace(/[^a-z0-9-]/g, "");
 
+  // Look up a SpriteCollab tracker sheet by name (case-insensitive).
+  // Some base names (e.g. "basculin", "aegislash", "zygarde", "mimikyu",
+  // and many more) are not accepted by PokeAPI without a form suffix, but
+  // exist in the tracker. This covers every pokemon in the tracker, not
+  // just a hardcoded list.
+  const findTrackerSheetByName = (name) => {
+    const normalized = name.toLowerCase();
+    for (const [sheetId, sheet] of Object.entries(tracker)) {
+      if (sheet.name && sheet.name.toLowerCase() === normalized) {
+        return { sheetId: Number(sheetId), sheet };
+      }
+    }
+    return undefined;
+  };
+
   try {
     let data;
     let spriteId;
@@ -54,14 +69,25 @@ export default async function handler(req, res) {
     let displayName = null;
 
     // Exact lookup of the requested pokemon (base name or form).
-    const response = await fetch(
+    let response = await fetch(
       `https://pokeapi.co/api/v2/pokemon/${encodeURIComponent(normalizedName)}`
     );
 
     if (!response.ok) {
-      console.log(`poketype: pokemon not found "${normalizedName}"`);
-      sendEmpty();
-      return;
+      // PokeAPI does not recognize this base name. Fall back to the tracker
+      // to find the sheet by name, then fetch by numeric ID.
+      const match = findTrackerSheetByName(normalizedName);
+      if (!match) {
+        console.log(`poketype: pokemon not found "${normalizedName}"`);
+        sendEmpty();
+        return;
+      }
+      response = await fetch(`https://pokeapi.co/api/v2/pokemon/${match.sheetId}`);
+      if (!response.ok) {
+        console.log(`poketype: pokemon not found by id ${match.sheetId}`);
+        sendEmpty();
+        return;
+      }
     }
 
     data = await response.json();
