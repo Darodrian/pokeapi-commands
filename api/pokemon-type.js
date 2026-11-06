@@ -18,30 +18,118 @@ export default async function handler(req, res) {
 
   // Base pokemon name -> PokeAPI form variants that have a sprite in the
   // DEPLOYED spritecollab manifest (flat, one entry per numeric ID 1-898).
-  // Form variants with IDs above 898 (indeedee-female, meowstic-female,
-  // zygarde-10/complete, gastrodon-east, castform weather forms, unown
-  // letters, etc.) are not in the deployed manifest and cannot be animated
-  // until spritecollab is updated. They are intentionally omitted here so
-  // we never try to publish a trigger for a missing sprite.
+  // Each variant includes its PokeAPI form name and sprite ID.
+  // Variants with sprite IDs above 898 are not in the deployed manifest
+  // and are intentionally omitted so we never try to publish a trigger
+  // for a missing sprite.
   const FORM_VARIANTS = {
-    mimikyu: [{ name: "mimikyu-disguised", id: 778 }],
-    indeedee: [{ name: "indeedee-male", id: 876 }],
-    meowstic: [{ name: "meowstic-male", id: 678 }],
-    zygarde: [{ name: "zygarde-50", id: 718 }],
-    basculin: [{ name: "basculin-red-striped", id: 550 }],
-    gourgeist: [{ name: "gourgeist-average", id: 711 }],
-    pumpkaboo: [{ name: "pumpkaboo-average", id: 710 }],
-    wishiwashi: [{ name: "wishiwashi-solo", id: 746 }],
-    keldeo: [{ name: "keldeo-ordinary", id: 647 }],
-    meloetta: [{ name: "meloetta-aria", id: 648 }],
-    eiscue: [{ name: "eiscue-ice", id: 875 }],
-    morpeko: [{ name: "morpeko-full-belly", id: 877 }],
-    urshifu: [{ name: "urshifu-single-strike", id: 892 }],
-    gastrodon: [{ name: "gastrodon", id: 423 }],
-    castform: [{ name: "castform", id: 351 }],
-    unown: [{ name: "unown", id: 201 }],
-    shellos: [{ name: "shellos", id: 422 }],
-    cherrim: [{ name: "cherrim", id: 487 }],
+    mimikyu: [
+      { name: "mimikyu-disguised", id: 778 },
+      { name: "mimikyu-busted", id: 778 },
+    ],
+    indeedee: [
+      { name: "indeedee-male", id: 876 },
+      { name: "indeedee-female", id: 876 },
+    ],
+    meowstic: [
+      { name: "meowstic-male", id: 678 },
+    ],
+    zygarde: [
+      { name: "zygarde-50", id: 718 },
+      { name: "zygarde-10", id: 718 },
+      { name: "zygarde-complete", id: 718 },
+      { name: "zygarde-50-power-construct", id: 718 },
+      { name: "zygarde-10-power-construct", id: 718 },
+    ],
+    basculin: [
+      { name: "basculin-red-striped", id: 550 },
+      { name: "basculin-white-striped", id: 550 },
+      { name: "basculin-blue-striped", id: 550 },
+    ],
+    gourgeist: [
+      { name: "gourgeist-average", id: 711 },
+      { name: "gourgeist-small", id: 711 },
+      { name: "gourgeist-large", id: 711 },
+      { name: "gourgeist-super-size", id: 711 },
+    ],
+    pumpkaboo: [
+      { name: "pumpkaboo-average", id: 710 },
+      { name: "pumpkaboo-small", id: 710 },
+      { name: "pumpkaboo-large", id: 710 },
+      { name: "pumpkaboo-super-size", id: 710 },
+    ],
+    wishiwashi: [
+      { name: "wishiwashi-solo", id: 746 },
+      { name: "wishiwashi-school", id: 746 },
+    ],
+    keldeo: [
+      { name: "keldeo-ordinary", id: 647 },
+      { name: "keldeo-resolute", id: 647 },
+    ],
+    meloetta: [
+      { name: "meloetta-aria", id: 648 },
+      { name: "meloetta-pirouette", id: 648 },
+    ],
+    eiscue: [
+      { name: "eiscue-ice", id: 875 },
+      { name: "eiscue-noice", id: 875 },
+    ],
+    morpeko: [
+      { name: "morpeko-full-belly", id: 877 },
+      { name: "morpeko-hangry", id: 877 },
+    ],
+    urshifu: [
+      { name: "urshifu-single-strike", id: 892 },
+      { name: "urshifu-rapid-strike", id: 892 },
+    ],
+    gastrodon: [
+      { name: "gastrodon-west", id: 423 },
+      { name: "gastrodon-east", id: 423 },
+    ],
+    castform: [
+      { name: "castform-normal", id: 351 },
+      { name: "castform-sunny", id: 351 },
+      { name: "castform-rainy", id: 351 },
+      { name: "castform-snowy", id: 351 },
+    ],
+    unown: [
+      { name: "unown-a", id: 201 },
+      { name: "unown-b", id: 201 },
+      { name: "unown-c", id: 201 },
+      { name: "unown-d", id: 201 },
+      { name: "unown-e", id: 201 },
+      { name: "unown-f", id: 201 },
+      { name: "unown-g", id: 201 },
+      { name: "unown-h", id: 201 },
+      { name: "unown-i", id: 201 },
+      { name: "unown-j", id: 201 },
+      { name: "unown-k", id: 201 },
+      { name: "unown-l", id: 201 },
+      { name: "unown-m", id: 201 },
+      { name: "unown-n", id: 201 },
+      { name: "unown-o", id: 201 },
+      { name: "unown-p", id: 201 },
+      { name: "unown-q", id: 201 },
+      { name: "unown-r", id: 201 },
+      { name: "unown-s", id: 201 },
+      { name: "unown-t", id: 201 },
+      { name: "unown-u", id: 201 },
+      { name: "unown-v", id: 201 },
+      { name: "unown-w", id: 201 },
+      { name: "unown-x", id: 201 },
+      { name: "unown-y", id: 201 },
+      { name: "unown-z", id: 201 },
+      { name: "unown-exclamation", id: 201 },
+      { name: "unown-question", id: 201 },
+    ],
+    shellos: [
+      { name: "shellos-west", id: 422 },
+      { name: "shellos-east", id: 422 },
+    ],
+    cherrim: [
+      { name: "cherrim-overcast", id: 487 },
+      { name: "cherrim-sunshine", id: 487 },
+    ],
     nidoran: [
       { name: "nidoran-m", id: 32 },
       { name: "nidoran-f", id: 29 },
@@ -154,57 +242,94 @@ export default async function handler(req, res) {
     let spriteId;
     let selectedVariation = null;
 
-    // 1. Try the exact name the user typed first.
-    const exactResponse = await fetch(
-      `https://pokeapi.co/api/v2/pokemon/${encodeURIComponent(normalizedName)}`
-    );
+    // Check if the user typed a base name that has known variants.
+    const baseVariants = FORM_VARIANTS[normalizedName];
 
-    if (exactResponse.ok) {
-      data = await exactResponse.json();
-      spriteId = data.id;
-      const info = SPRITE_VARIATION_MAP[data.name] || { id: data.id, variation: null };
-      spriteId = info.id;
-      selectedVariation = info.variation;
-    } else if (exactResponse.status === 404) {
-      // 2. On 404, look up known form variants for this base name.
-      const variants = FORM_VARIANTS[normalizedName];
-      if (variants) {
-        // Filter to variants that actually have a sprite in spritecollab.
-        const availability = await Promise.all(
-          variants.map(async (v) => {
-            const info = SPRITE_VARIATION_MAP[v.name] || { id: v.id, variation: null };
-            return spriteExists(info.id, info.variation);
-          })
+    if (baseVariants && baseVariants.length > 0) {
+      // Randomly pick a sprite-available variant.
+      const availability = await Promise.all(
+        baseVariants.map(async (v) => {
+          const info =
+            SPRITE_VARIATION_MAP[v.name] || { id: v.id, variation: null };
+          return spriteExists(info.id, info.variation);
+        })
+      );
+      const spriteVariants = baseVariants.filter((_, i) => availability[i]);
+
+      if (spriteVariants.length > 0) {
+        const picked =
+          spriteVariants[Math.floor(Math.random() * spriteVariants.length)];
+        const info =
+          SPRITE_VARIATION_MAP[picked.name] || {
+            id: picked.id,
+            variation: null,
+          };
+
+        // Try fetching the variant's PokeAPI entry for correct types.
+        const variantResponse = await fetch(
+          `https://pokeapi.co/api/v2/pokemon/${encodeURIComponent(
+            picked.name
+          )}`
         );
-        const spriteVariants = variants.filter((_, i) => availability[i]);
-
-        if (spriteVariants.length > 0) {
-          const picked =
-            spriteVariants[Math.floor(Math.random() * spriteVariants.length)];
-          const info = SPRITE_VARIATION_MAP[picked.name] || { id: picked.id, variation: null };
-          const variantResponse = await fetch(
-            `https://pokeapi.co/api/v2/pokemon/${encodeURIComponent(picked.name)}`
+        if (variantResponse.ok) {
+          data = await variantResponse.json();
+          spriteId = info.id;
+          selectedVariation = info.variation;
+        } else {
+          // Variant not in PokeAPI (e.g. gastrodon-east), fall back to base name.
+          const baseResponse = await fetch(
+            `https://pokeapi.co/api/v2/pokemon/${encodeURIComponent(
+              normalizedName
+            )}`
           );
-          if (variantResponse.ok) {
-            data = await variantResponse.json();
+          if (baseResponse.ok) {
+            data = await baseResponse.json();
             spriteId = info.id;
             selectedVariation = info.variation;
           }
+        }
+      } else {
+        // No sprite-available variants; fall back to base name.
+        const baseResponse = await fetch(
+          `https://pokeapi.co/api/v2/pokemon/${encodeURIComponent(
+            normalizedName
+          )}`
+        );
+        if (baseResponse.ok) {
+          data = await baseResponse.json();
+          spriteId = data.id;
         }
       }
     }
 
     if (!data) {
-      console.log(`poketype: pokemon not found "${normalizedName}"`);
-      sendEmpty();
-      return;
+      // Not a base name with variants — try exact lookup.
+      const exactResponse = await fetch(
+        `https://pokeapi.co/api/v2/pokemon/${encodeURIComponent(normalizedName)}`
+      );
+
+      if (exactResponse.ok) {
+        data = await exactResponse.json();
+        spriteId = data.id;
+        const info =
+          SPRITE_VARIATION_MAP[data.name] || {
+            id: data.id,
+            variation: null,
+          };
+        spriteId = info.id;
+        selectedVariation = info.variation;
+      } else {
+        console.log(`poketype: pokemon not found "${normalizedName}"`);
+        sendEmpty();
+        return;
+      }
     }
 
-    // 3. Build a normalized display name (strip form suffix for variants).
+    // Build a normalized display name (strip form suffix for variants).
     const baseName = VARIANT_TO_BASE[data.name] ?? data.name;
     const displayName = capitalize(baseName);
 
-    // 4. Types.
+    // Types from the fetched data (variant-specific where available).
     const typeEntries = data.types.sort((a, b) => a.slot - b.slot);
     let types = typeEntries.map((entry) => entry.type.name);
 
@@ -231,11 +356,17 @@ export default async function handler(req, res) {
         ? `El pokémon ${displayName} es de tipo: ${formattedTypes}`
         : `Pokemon ${displayName} is type: ${formattedTypes}`;
 
-    // 5. Publish trigger (~5% shiny, only if sprite/shiny available).
+    // Publish trigger (~5% shiny, only if sprite/shiny available).
     // maybePublishFromQuery silently skips when no sprite exists.
     const wantsShiny = Math.random() < 0.05;
     const isShiny = wantsShiny && (await shinyExists(spriteId));
-    await maybePublishFromQuery(req.query, spriteId, data.name, isShiny, selectedVariation);
+    await maybePublishFromQuery(
+      req.query,
+      spriteId,
+      data.name,
+      isShiny,
+      selectedVariation
+    );
 
     res.setHeader("Content-Type", "text/plain");
     res.status(200).send(message);
