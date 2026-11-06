@@ -157,12 +157,6 @@ export default async function handler(req, res) {
       types,
       requestedLang === "es" ? "y" : "and"
     );
-    const shinySuffix = isShiny ? " ✨" : "";
-
-    const message =
-      requestedLang === "es"
-        ? `El pok\u00e9mon ${displayName}${shinySuffix} es de tipo: ${formattedTypes}`
-        : `Pokemon ${displayName}${shinySuffix} is type: ${formattedTypes}`;
 
     // Publish trigger (~5% shiny, only if sprite/shiny available).
     // maybePublishFromQuery silently skips when no sprite exists.
@@ -175,6 +169,13 @@ export default async function handler(req, res) {
       isShiny,
       selectedVariation
     );
+
+    const shinySuffix = isShiny ? " ✨" : "";
+
+    const message =
+      requestedLang === "es"
+        ? `El pok\u00e9mon ${displayName}${shinySuffix} es de tipo: ${formattedTypes}`
+        : `Pokemon ${displayName}${shinySuffix} is type: ${formattedTypes}`;
 
     res.setHeader("Content-Type", "text/plain");
     res.status(200).send(message);
