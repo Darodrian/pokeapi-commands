@@ -23,6 +23,11 @@ export default async function handler(req, res) {
       id = Math.floor(Math.random() * MAX_POKEMON) + 1;
     }
     const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
+    if (!response.ok) {
+      console.error(`random-pokemon: PokeAPI returned ${response.status} for id ${id}`);
+      res.status(200).send("");
+      return;
+    }
     const data = await response.json();
     const formattedName = formatPokemonName(data.name);
     const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
