@@ -246,31 +246,40 @@ function playCurrentAnimOnce() {
     requestAnimationFrame(step);
   });
 }
+async function runSequence(id4, variation, shiny) {
+  await ensureManifest(shiny);
+  if (!(await loadAssetsForSprite(id4, variation, 'Walk', shiny))) return false;
+  await animateMove('left', ENTER_CYCLES * cycleMs());
+  const picked = pickCenterAnim(id4, variation, shiny);
+  const attempts = picked === 'Idle' ? ['Idle'] : [picked, 'Idle'];
+  let centered = false;
+  for (let i = 0; i < attempts.length && !centered; i++) {
+    if (await loadAssetsForSprite(id4, variation, attempts[i], shiny)) {
+      await playCurrentAnimOnce();
+      centered = true;
+    }
+  }
+  if (await loadAssetsForSprite(id4, variation, 'Walk', shiny)) {
+    await animateMove('right', EXIT_CYCLES * cycleMs());
+  }
+  container.classList.add('hidden');
+  drawRow = DIR_ROWS.down;
+  return true;
+}
+
 async function playSequence(id4, variation, shiny) {
   if (seqRunning) return true;
   seqRunning = true;
   try {
-    await ensureManifest(shiny);
-    if (!(await loadAssetsForSprite(id4, variation, 'Walk', shiny))) {
+    const played = await runSequence(id4, variation, shiny);
+    if (!played && shiny) {
+      console.warn(`overlay: shiny sheet unavailable for id ${id4}${variation ? ' var ' + variation : ''} - falling back to normal`);
+      return await runSequence(id4, variation, false);
+    }
+    if (!played) {
       console.warn(`overlay: no walk animation for id ${id4}${variation ? ' var ' + variation : ''} - skipping sequence`);
-      return false;
     }
-    await animateMove('left', ENTER_CYCLES * cycleMs());
-    const picked = pickCenterAnim(id4, variation, shiny);
-    const attempts = picked === 'Idle' ? ['Idle'] : [picked, 'Idle'];
-    let centered = false;
-    for (let i = 0; i < attempts.length && !centered; i++) {
-      if (await loadAssetsForSprite(id4, variation, attempts[i], shiny)) {
-        await playCurrentAnimOnce();
-        centered = true;
-      }
-    }
-    if (await loadAssetsForSprite(id4, variation, 'Walk', shiny)) {
-      await animateMove('right', EXIT_CYCLES * cycleMs());
-    }
-    container.classList.add('hidden');
-    drawRow = DIR_ROWS.down;
-    return true;
+    return played;
   } catch (e) {
     console.warn('overlay: sequence error', e);
     return false;

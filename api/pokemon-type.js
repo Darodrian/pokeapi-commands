@@ -3,7 +3,7 @@ import tracker from "../lib/tracker.json" with { type: "json" };
 import {
   maybePublishFromQuery,
   spriteExists,
-  shinyExists,
+  rollShiny,
   spritePoolForSheetId,
   spriteDisplayName,
 } from "../lib/trigger.js";
@@ -158,10 +158,9 @@ export default async function handler(req, res) {
       requestedLang === "es" ? "y" : "and"
     );
 
-    // Publish trigger (~5% shiny, only if sprite/shiny available).
+    // Publish trigger (SHINY_CHANCE shiny, only if a shiny Walk sprite exists).
     // maybePublishFromQuery silently skips when no sprite exists.
-    const wantsShiny = Math.random() < 0.05;
-    const isShiny = wantsShiny && (await shinyExists(spriteId, selectedVariation));
+    const isShiny = await rollShiny(spriteId, selectedVariation);
     await maybePublishFromQuery(
       req.query,
       spriteId,
