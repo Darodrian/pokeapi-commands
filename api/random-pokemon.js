@@ -1,8 +1,9 @@
 import {
   MAX_POKEMON,
-  randomSpriteId,
+  randomSpriteEntry,
   formatPokemonName,
   maybePublishFromQuery,
+  spriteDisplayName,
 } from "../lib/trigger.js";
 
 export default async function handler(req, res) {
@@ -10,6 +11,8 @@ export default async function handler(req, res) {
     const query = req.query || {};
     const wantsTrigger = query.ch !== undefined || query.key !== undefined;
     let id;
+    let variation = null;
+
     if (query.id !== undefined) {
       const requested = Number(query.id);
       if (!Number.isInteger(requested) || requested < 1 || requested > MAX_POKEMON) {
@@ -18,21 +21,31 @@ export default async function handler(req, res) {
       }
       id = requested;
     } else if (wantsTrigger) {
-      id = await randomSpriteId();
+      // Trigger path: pick a random pokemon (equal weight), then a random
+      // sprite from its pool (base + every deployed variation).
+      const entry = await randomSpriteEntry();
+      id = entry.id;
+      variation = entry.variation;
     } else {
       id = Math.floor(Math.random() * MAX_POKEMON) + 1;
     }
+
+    let data;
+    let name;
     const response = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`);
-    if (!response.ok) {
-      console.error(`random-pokemon: PokeAPI returned ${response.status} for id ${id}`);
-      res.status(200).send("");
-      return;
+    if (response.ok) {
+      data = await response.json();
+      // Display the specific variation name when a variation rolled.
+      name = variation ? (spriteDisplayName(id, variation) || data.name) : data.name;
+    } else {
+      // id may sit outside PokeAPI's range (e.g. sheet 1024); fall back to tracker name.
+      name = spriteDisplayName(id, variation) || `pokemon-${id}`;
     }
-    const data = await response.json();
-    const formattedName = formatPokemonName(data.name);
+
+    const formattedName = formatPokemonName(name);
     const imageUrl = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 
-    await maybePublishFromQuery(query, id, data.name);
+    await maybePublishFromQuery(query, id, name, undefined, variation);
 
     const format = typeof req.query?.format === "string" ? req.query.format.toLowerCase() : "text";
 
@@ -40,9 +53,10 @@ export default async function handler(req, res) {
       res.setHeader("Content-Type", "application/json");
       res.status(200).json({
         id,
-        name: data.name,
+        name: data ? data.name : name,
         formattedName,
         imageUrl,
+        variation,
       });
       return;
     }
