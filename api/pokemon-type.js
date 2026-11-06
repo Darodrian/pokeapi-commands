@@ -37,6 +37,14 @@ export default async function handler(req, res) {
   const requestedLang =
     typeof lang === "string" ? lang.trim().toLowerCase() : "en";
 
+  // Normalize a tracker variant name to a PokeAPI form suffix:
+  // underscores become hyphens, lowercase, strip other non-alphanumeric.
+  // E.g. "Mega_X" -> "mega-x", "Rock_Star" -> "rock-star".
+  const normalizeForm = (text) => String(text)
+    .toLowerCase()
+    .replace(/_/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+
   try {
     let data;
     let spriteId;
@@ -69,8 +77,30 @@ export default async function handler(req, res) {
     const trackerName = spriteDisplayName(data.id, selectedVariation);
     displayName = trackerName || capitalize(data.name);
 
-    // Types from the fetched data (variant-specific where available).
-    const typeEntries = data.types.sort((a, b) => a.slot - b.slot);
+    // Resolve types: try the variation-specific PokeAPI form first, fall back
+    // to the base pokemon's types when no matching form exists.
+    let typeEntries = data.types.sort((a, b) => a.slot - b.slot);
+    if (selectedVariation) {
+      const sheet = tracker[String(data.id).padStart(4, "0")];
+      const trackerVariant = sheet?.subgroups?.[selectedVariation]?.name;
+      if (trackerVariant) {
+        const normalizedVariant = normalizeForm(trackerVariant);
+        const baseName = data.name;
+        const formName = `${baseName}-${normalizedVariant}`;
+        try {
+          const formResponse = await fetch(
+            `https://pokeapi.co/api/v2/pokemon/${encodeURIComponent(formName)}`
+          );
+          if (formResponse.ok) {
+            const formData = await formResponse.json();
+            typeEntries = formData.types.sort((a, b) => a.slot - b.slot);
+          }
+        } catch (err) {
+          // fall back to base types
+        }
+      }
+    }
+
     let types = typeEntries.map((entry) => entry.type.name);
 
     if (requestedLang === "es") {
